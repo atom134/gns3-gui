@@ -24,6 +24,7 @@ import tempfile
 import pickle
 import json
 import sip
+import os
 
 from .qt import QtCore, QtGui, QtWidgets, qpartial
 from .modules import MODULES
@@ -32,6 +33,14 @@ from .controller import Controller
 from .appliance_manager import ApplianceManager
 from .dialogs.configuration_dialog import ConfigurationDialog
 from .local_config import LocalConfig
+
+CATEGORY_TO_ID = {
+    "firewall": 3,
+    "guest": 2,
+    "switch": 1,
+    "multilayer_switch": 1,
+    "router": 0
+}
 
 CATEGORY_TO_ID = {
     "firewall": 3,
@@ -93,21 +102,17 @@ class NodesView(QtWidgets.QTreeWidget):
 
         display_appliances = set()
 
-        if self._show_installed_appliances:
-            for module in MODULES:
-                for node in module.instance().nodes():
-                    if category is not None and category not in node["categories"]:
-                        continue
-                    if search != "" and search not in node["name"].lower():
-                        continue
-
-                    display_appliances.add(node["name"])
-                    item = QtWidgets.QTreeWidgetItem(self)
-                    item.setText(0, node["name"])
-                    item.setData(0, QtCore.Qt.UserRole, node)
-                    item.setData(1, QtCore.Qt.UserRole, "node")
-                    item.setSizeHint(0, QtCore.QSize(32, 32))
-                    Controller.instance().getSymbolIcon(node["symbol"], qpartial(self._setItemIcon, item))
+        for appliance in ApplianceManager.instance().appliances():
+            if category is not None and category != CATEGORY_TO_ID[appliance["category"]]:
+                continue
+            if search != "" and search not in appliance["name"].lower():
+                display_appliances.add(node["name"])
+                item = QtWidgets.QTreeWidgetItem(self)
+                item.setText(0, node["name"])
+                item.setData(0, QtCore.Qt.UserRole, node)
+                item.setData(1, QtCore.Qt.UserRole, "node")
+                item.setSizeHint(0, QtCore.QSize(32, 32))
+                Controller.instance().getSymbolIcon(node["symbol"], qpartial(self._setItemIcon, item))
 
         if self._show_available_appliances:
             for appliance in ApplianceManager.instance().appliance_templates():

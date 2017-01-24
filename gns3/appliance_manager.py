@@ -26,6 +26,7 @@ class ApplianceManager:
 
     def __init__(self):
         self._appliance_templates = []
+        self._appliances = []
         self._controller = Controller.instance()
         self._controller.connected_signal.connect(self._controllerConnectedSlot)
         self._controller.disconnected_signal.connect(self._controllerDisconnectedSlot)
@@ -34,6 +35,7 @@ class ApplianceManager:
     def _controllerConnectedSlot(self):
         if self._controller.connected():
             self._controller.get("/appliances/templates", self._listApplianceTemplateCallback)
+            self._controller.get("/appliances", self._listAppliancesCallback)
 
     def _controllerDisconnectedSlot(self):
         self._appliance_templates = []
@@ -46,6 +48,18 @@ class ApplianceManager:
             log.error("Error while getting appliance list: {}".format(result["message"]))
             return
         self._appliance_templates = result
+
+    def _controllerDisconnectedSlot(self):
+        self._appliances = []
+
+    def appliances(self):
+        return self._appliances
+
+    def _listAppliancesCallback(self, result, error=False, **kwargs):
+        if error is True:
+            log.error("Error while getting appliance list: {}".format(result["message"]))
+            return
+        self._appliances = result
 
     @staticmethod
     def instance():
