@@ -33,7 +33,6 @@ from .atm_switch import ATMSwitch
 from .settings import (
     BUILTIN_SETTINGS,
     CLOUD_SETTINGS,
-    NAT_SETTINGS,
     ETHERNET_HUB_SETTINGS,
     ETHERNET_SWITCH_SETTINGS
 )
@@ -228,6 +227,7 @@ class Builtin(Module):
         # create an instance of the node class
         return node_class(self, server, project)
 
+<<<<<<< 3149a52292176dc4167ac228fcc621e07f4b4647
     def createNode(self, node, node_name):
         """
         Creates a node.
@@ -263,6 +263,8 @@ class Builtin(Module):
                     return
         node.create()
 
+=======
+>>>>>>> Appliances API WIP
     @staticmethod
     def findAlternativeInterface(node, missing_interface):
 
@@ -338,6 +340,7 @@ class Builtin(Module):
                  "symbol": node_class.defaultSymbol(),
                  "builtin": True,
                  "node_type": node_class.URL_PREFIX
+<<<<<<< 3149a52292176dc4167ac228fcc621e07f4b4647
                  }
             )
 
@@ -371,9 +374,10 @@ class Builtin(Module):
                  "server": switch["server"],
                  "symbol": switch["symbol"],
                  "categories": [switch["category"]]
+=======
+>>>>>>> Appliances API WIP
                  }
             )
-
         return nodes
 
     @staticmethod

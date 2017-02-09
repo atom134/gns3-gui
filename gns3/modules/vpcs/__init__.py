@@ -23,14 +23,12 @@ import os
 import copy
 import shutil
 
-from gns3.qt import QtWidgets
 from gns3.local_config import LocalConfig
 from gns3.local_server_config import LocalServerConfig
 from gns3.utils.get_default_base_config import get_default_base_config
 from gns3.utils.get_resource import get_resource
 
 from ..module import Module
-from ..module_error import ModuleError
 from .vpcs_node import VPCSNode
 from .settings import VPCS_SETTINGS
 from .settings import VPCS_NODES_SETTINGS
@@ -186,33 +184,6 @@ class VPCS(Module):
         # create an instance of the node class
         return node_class(self, server, project)
 
-    def createNode(self, node, node_name):
-        """
-        Creates a node.
-
-        :param node: Node instance
-        :param node_name: Node name
-        """
-
-        log.info("creating node {}".format(node))
-
-        if node_name:
-            for node_key, info in self._vpcs_nodes.items():
-                if node_name == info["name"]:
-                    vm_settings = {}
-                    for setting_name, value in self._vpcs_nodes[node_key].items():
-
-                        if setting_name in node.settings() and setting_name != "name" and value != "" and value is not None:
-                            vm_settings[setting_name] = value
-
-                    node.create(default_name_format=info["default_name_format"], additional_settings=vm_settings)
-                    return
-
-        vm_settings = {
-            "base_script_file": self._settings.get("base_script_file", get_default_base_config(get_resource(os.path.join("configs", "vpcs_base_config.txt"))))
-        }
-        node.create(additional_settings=vm_settings)
-
     def reset(self):
         """
         Resets the module.
@@ -241,18 +212,6 @@ class VPCS(Module):
         for node in self._nodes:
             if node.initialized():
                 node.importConfigFromDirectory(directory)
-
-    @staticmethod
-    def getNodeClass(name):
-        """
-        Returns the object with the corresponding name.
-
-        :param name: object name
-        """
-
-        if name in globals():
-            return globals()[name]
-        return None
 
     @staticmethod
     def getNodeType(name, platform=None):
@@ -310,16 +269,6 @@ class VPCS(Module):
                 "builtin": True
             }
         )
-
-        for node in self._vpcs_nodes.values():
-            nodes.append(
-                {"class": VPCSNode.__name__,
-                 "name": node["name"],
-                 "server": node["server"],
-                 "symbol": node["symbol"],
-                 "categories": [node["category"]]
-                 }
-            )
         return nodes
 
     @staticmethod

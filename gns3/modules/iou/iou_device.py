@@ -23,7 +23,6 @@ import os
 import re
 from gns3.node import Node
 from gns3.utils.normalize_filename import normalize_filename
-from gns3.image_manager import ImageManager
 from .settings import IOU_DEVICE_SETTINGS
 
 import logging
@@ -62,33 +61,6 @@ class IOUDevice(Node):
 
         self.settings().update(iou_device_settings)
 
-    def create(self, iou_path, name=None, node_id=None, additional_settings={}, default_name_format="IOU{0}"):
-        """
-        Creates this IOU device.
-
-        :param iou_path: path to an IOU image
-        :param name: optional name
-        :param console: optional TCP console port
-        """
-
-        params = {"path": iou_path}
-        # push the startup-config
-        if "startup_config" in additional_settings:
-            base_config_content = self._readBaseConfig(additional_settings["startup_config"])
-            if base_config_content is not None:
-                params["startup_config_content"] = base_config_content
-            del additional_settings["startup_config"]
-
-        # push the startup-config
-        if "private_config" in additional_settings:
-            base_config_content = self._readBaseConfig(additional_settings["private_config"])
-            if base_config_content is not None:
-                params["private_config_content"] = base_config_content
-            del additional_settings["private_config"]
-
-        params.update(additional_settings)
-        self._create(name, node_id, params, default_name_format)
-
     def _createCallback(self, result):
         """
         Callback for create.
@@ -105,8 +77,6 @@ class IOUDevice(Node):
         if self.status() == Node.started:
             log.debug("{} is already running".format(self.name()))
             return
-
-        params = {}
 
         log.debug("{} is starting".format(self.name()))
         self.controllerHttpPost("/nodes/{node_id}/start".format(node_id=self._node_id), self._startCallback, progressText="{} is starting".format(self.name()))

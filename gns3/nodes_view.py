@@ -21,7 +21,6 @@ on the QGraphics scene.
 """
 
 import tempfile
-import pickle
 import json
 import sip
 import os
@@ -70,7 +69,7 @@ class NodesView(QtWidgets.QTreeWidget):
         # enables the possibility to drag items.
         self.setDragEnabled(True)
 
-        Controller.instance().connected_signal.connect(self.refresh)
+        ApplianceManager.instance().appliances_changed_signal.connect(self.refresh)
 
     def setCurrentSearch(self, search):
         self._current_search = search
@@ -114,6 +113,22 @@ class NodesView(QtWidgets.QTreeWidget):
                 item.setSizeHint(0, QtCore.QSize(32, 32))
                 Controller.instance().getSymbolIcon(node["symbol"], qpartial(self._setItemIcon, item))
 
+        if self._show_installed_appliances:
+            for appliance in ApplianceManager.instance().appliances():
+                if category is not None and category != CATEGORY_TO_ID[appliance["category"]]:
+                    continue
+                if search != "" and search not in appliance["name"].lower():
+                    continue
+                if appliance["name"] in display_appliances:
+                    continue
+
+                item = QtWidgets.QTreeWidgetItem(self)
+                item.setText(0, appliance["name"])
+                item.setData(0, QtCore.Qt.UserRole, appliance["appliance_id"])
+                item.setData(1, QtCore.Qt.UserRole, "appliance")
+                item.setSizeHint(0, QtCore.QSize(32, 32))
+                Controller.instance().getSymbolIcon(appliance.get("symbol"), qpartial(self._setItemIcon, item), fallback=":/symbols/" + appliance["category"] + ".svg")
+
         if self._show_available_appliances:
             for appliance in ApplianceManager.instance().appliance_templates():
                 if category is not None and category != CATEGORY_TO_ID[appliance["category"]]:
@@ -127,7 +142,7 @@ class NodesView(QtWidgets.QTreeWidget):
                 item.setForeground(0, QtGui.QBrush(QtGui.QColor("gray")))
                 item.setText(0, appliance["name"])
                 item.setData(0, QtCore.Qt.UserRole, appliance)
-                item.setData(1, QtCore.Qt.UserRole, "appliance")
+                item.setData(1, QtCore.Qt.UserRole, "appliance_template")
                 item.setSizeHint(0, QtCore.QSize(32, 32))
                 Controller.instance().getSymbolIcon(appliance.get("symbol"), qpartial(self._setItemIcon, item), fallback=":/symbols/" + appliance["category"] + ".svg")
 
@@ -167,7 +182,7 @@ class NodesView(QtWidgets.QTreeWidget):
             item = self.currentItem()
 
             # retrieve the node class from the item data
-            if item.data(1, QtCore.Qt.UserRole) == "appliance":
+            if item.data(1, QtCore.Qt.UserRole) == "appliance_template":
                 f = tempfile.NamedTemporaryFile(mode="w+", suffix=".gns3a", delete=False)
                 json.dump(item.data(0, QtCore.Qt.UserRole), f)
                 f.close()
@@ -175,13 +190,12 @@ class NodesView(QtWidgets.QTreeWidget):
                 return
 
             icon = item.icon(0)
-            node = item.data(0, QtCore.Qt.UserRole)
             mimedata = QtCore.QMimeData()
 
-            # pickle the node class, set the Mime type and data
-            # and start dragging the item.
-            data = pickle.dumps(node)
-            mimedata.setData("application/x-gns3-node", data)
+            if item.data(1, QtCore.Qt.UserRole) == "appliance":
+                appliance_id = item.data(0, QtCore.Qt.UserRole)
+                mimedata.setData("application/x-gns3-appliance", appliance_id.encode())
+
             drag = QtGui.QDrag(self)
             drag.setMimeData(mimedata)
             drag.setPixmap(icon.pixmap(self.iconSize()))
@@ -191,15 +205,17 @@ class NodesView(QtWidgets.QTreeWidget):
 
     def _showContextualMenu(self):
         item = self.currentItem()
-        node = item.data(0, QtCore.Qt.UserRole)
+        node = ApplianceManager.instance().getAppliance(item.data(0, QtCore.Qt.UserRole))
+        if not node:
+            return
         for module in MODULES:
-            node_class = module.getNodeClass(node["class"])
+            node_class = module.getNodeType(node["node_type"])
             if node_class:
                 break
 
         # We can not edit stuff like EthernetSwitch
         # or without config template like VPCS
-        if "builtin" not in node and hasattr(module, "vmConfigurationPage"):
+        if not node["builtin"] and hasattr(module, "vmConfigurationPage"):
             for vm_key, vm in module.instance().VMs().items():
                 if vm["name"] == node["name"]:
                     break
